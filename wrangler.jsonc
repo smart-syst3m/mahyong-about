@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mahyong-about",
+  "main": "src/index.js",
+  "compatibility_date": "2026-08-20",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS"
+  },
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    // Default (non-Indonesia) About page, hosted elsewhere. Point this at the real URL before
+    // deploying for real - it's read by src/index.js whenever CF-IPCountry isn't "ID".
+    "ABOUT_URL_DEFAULT": "https://example.com/about-en"
+  }
+}
