@@ -11,8 +11,11 @@
     "enabled": true
   },
   "vars": {
-    // Default (non-Indonesia) About page, hosted elsewhere. Point this at the real URL before
-    // deploying for real - it's read by src/index.js whenever CF-IPCountry isn't "ID".
-    "ABOUT_URL_DEFAULT": "https://example.com/about-en"
+    // Default (non-Indonesia) About page, hosted elsewhere - read by src/index.js whenever
+    // CF-IPCountry isn't "ID". TESTING VALUE ONLY (ubuntu.com, chosen purely because it's a real
+    // reachable https page) - replace with the real non-Indonesia About URL before shipping.
+    // Edit this value here (not in the Cloudflare dashboard) - Workers Builds redeploys from this
+    // file on every push to main, so a dashboard-only edit gets silently overwritten next deploy.
+    "ABOUT_URL_DEFAULT": "https://ubuntu.com/"
   }
 }
