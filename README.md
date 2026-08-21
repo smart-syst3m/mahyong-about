@@ -5,11 +5,17 @@ Cloudflare Worker yang melayani dua hal untuk aplikasi Android **Mahyong**:
 1. **`GET /config`** — endpoint yang dipanggil `AboutUrlResolver` di app. Membalas satu baris teks
    berisi satu URL `https://…`, dipilih berdasarkan negara pemanggil (header `CF-IPCountry`, diisi
    otomatis oleh Cloudflare di setiap request — tidak perlu produk tambahan apa pun).
+   - **Butuh header `X-Mahyong-Token`** yang cocok dengan secret `APP_TOKEN` — tanpa itu (atau kalau
+     nilainya salah) dibalas `403`. Ini **bukan keamanan sungguhan**: token yang sama tertanam
+     (ter-obfuscate) di app Android-nya (`APP_ACCESS_TOKEN` di `AboutConfig.kt`), jadi siapa pun
+     yang men-decompile APK bisa mendapatkannya. Gunanya cuma menyaring bot/scraper acak yang
+     kebetulan menemukan URL ini, bukan menahan penyerang yang menyasar spesifik. **Fail-closed**:
+     kalau secret `APP_TOKEN` belum pernah di-set, endpoint ini menolak semua orang, termasuk app.
    - Negara `ID` → `ABOUT_URL_ID` (kalau tidak di-set, fallback ke halaman `/` di Worker ini
      sendiri).
    - Negara lain → `ABOUT_URL_DEFAULT` (halaman non-Indonesia, di-host di luar Worker ini).
    - `?cc=XX` bisa dipakai untuk menimpa deteksi negara secara manual saat verifikasi
-     (`curl "https://…/config?cc=ID"`).
+     (`curl -H "X-Mahyong-Token: <token>" "https://…/config?cc=ID"`).
    - Responsnya **selalu** `Cache-Control: no-store` — jangan diubah. Config ini sengaja tidak
      boleh basi di cache mana pun, termasuk cache Cloudflare sendiri.
 2. **Static assets** (`public/`) — halaman About berbahasa Indonesia (`index.html`), juga
@@ -46,14 +52,35 @@ Edit `public/index.html` langsung, lalu `npm run deploy`. **Jangan** menyebut na
 atau proyek referensi apa pun yang dipakai untuk membangun game ini di halaman ini — halaman ini
 murni deskripsi produk untuk pemain.
 
+## Set token akses app (`APP_TOKEN`) — sekali saja
+
+`/config` menolak semua request yang tidak membawa header `X-Mahyong-Token` yang cocok. Set
+plaintext-nya sebagai **secret** (bukan `vars` — jangan pernah ditaruh di `wrangler.jsonc` atau
+commit ke git):
+
+```sh
+npx wrangler secret put APP_TOKEN
+# tempel plaintext token yang sama dengan APP_ACCESS_TOKEN di app (AboutConfig.kt) saat diminta
+```
+
+Atau lewat dashboard: Workers & Pages → mahyong-about → Settings → Variables and Secrets → Add →
+tipe **Secret**, nama `APP_TOKEN`. Sekali di-set, nilainya bertahan lintas deploy Workers Builds
+berikutnya (beda dari `vars`, yang di-reset tiap `wrangler.jsonc` ter-redeploy dari git) — tidak
+perlu diulang tiap push.
+
+Kalau token di app diganti (rotasi), ulangi perintah di atas dengan nilai baru, dan pastikan APK
+yang beredar sudah memakai nilai yang sama - token lama otomatis berhenti berfungsi begitu secret
+diganti.
+
 ## Verifikasi cepat setelah deploy
 
 ```sh
-curl -s "https://<worker>/config"                    # negara asli pemanggil
-curl -s "https://<worker>/config?cc=ID"               # URL halaman Indonesia
-curl -s "https://<worker>/config?cc=US"                # URL halaman default
-curl -sI "https://<worker>/config" | grep -i cache-control     # -> no-store
-curl -sI "https://<worker>/" | grep -i -e content-type -e cache-control
+curl -s -o /dev/null -w "%{http_code}\n" "https://<worker>/config"        # -> 403 (tanpa token)
+curl -s -H "X-Mahyong-Token: <token asli>" "https://<worker>/config"      # negara asli pemanggil
+curl -s -H "X-Mahyong-Token: <token asli>" "https://<worker>/config?cc=ID"   # URL halaman Indonesia
+curl -s -H "X-Mahyong-Token: <token asli>" "https://<worker>/config?cc=US"   # URL halaman default
+curl -sI -H "X-Mahyong-Token: <token asli>" "https://<worker>/config" | grep -i cache-control  # -> no-store
+curl -sI "https://<worker>/" | grep -i -e content-type -e cache-control   # root tidak digerbangi token
 ```
 
 ## Lokal

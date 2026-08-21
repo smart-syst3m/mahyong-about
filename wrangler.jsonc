@@ -17,5 +17,11 @@
     // Edit this value here (not in the Cloudflare dashboard) - Workers Builds redeploys from this
     // file on every push to main, so a dashboard-only edit gets silently overwritten next deploy.
     "ABOUT_URL_DEFAULT": "https://ubuntu.com/"
+
+    // NOT listed here: APP_TOKEN, the shared secret /config checks via isAuthorized() in
+    // src/index.js. It's a *secret*, not a var - set it with `wrangler secret put APP_TOKEN` (or
+    // the dashboard's Settings > Variables and Secrets > Add > type "Secret"), never as plaintext
+    // in this file. Unlike vars, secrets are NOT part of the deployed config and are NOT reset by
+    // Workers Builds redeploys - set it once, it survives every future git push.
   }
 }

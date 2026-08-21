@@ -5,23 +5,47 @@
  *                        (Cloudflare's CF-IPCountry request header - no extra product needed,
  *                        every Worker request carries it). This is the contract the Android app's
  *                        AboutUrlResolver expects (see AboutConfig.kt#parseAboutUrl): a bare https
- *                        URL, nothing else on the line.
+ *                        URL, nothing else on the line. Requires the X-Mahyong-Token header (see
+ *                        isAuthorized) - anything else gets 403.
  * - everything else  -> served from ./public as static assets (the About page itself, robots.txt).
+ *                        Not gated by the token - it's just static marketing copy, and the
+ *                        Android app loads it directly via WebView, which can't attach the same
+ *                        custom header on WebView-driven navigation anyway.
  *
  * Country resolution happens entirely at the edge so the app never needs to know - or ask a third
  * party like ipinfo.io - what country it's in.
  */
+const TOKEN_HEADER = "X-Mahyong-Token";
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
     if (url.pathname === "/config") {
+      if (!isAuthorized(request, env)) {
+        return new Response("forbidden", { status: 403 });
+      }
       return handleConfig(request, env, url);
     }
 
     return env.ASSETS.fetch(request);
   },
 };
+
+/**
+ * Filters out casual bots/scrapers hitting /config directly - NOT real access control. The
+ * matching token lives in the Android app's AboutConfig.kt (APP_ACCESS_TOKEN, obfuscated) and
+ * anyone decompiling the APK can recover it, same honest limit documented there. Fails CLOSED:
+ * if the APP_TOKEN secret was never set (env.APP_TOKEN is undefined), this returns false and
+ * /config 403s everyone, app included, rather than silently staying open.
+ *
+ * Plain string comparison, not constant-time - proportional to the fact this token is already
+ * extractable from the APK, so a timing side-channel wouldn't be a meaningfully bigger hole.
+ */
+function isAuthorized(request, env) {
+  const token = request.headers.get(TOKEN_HEADER);
+  return Boolean(env.APP_TOKEN) && token === env.APP_TOKEN;
+}
 
 function handleConfig(request, env, url) {
   // ?cc=XX lets a human (or curl) verify country routing without needing a VPN. It only ever
