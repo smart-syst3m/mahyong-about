@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="id">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Tentang Mahyong</title>
+<title>Mahyong</title>
 <style>
   :root {
     --bg: #faf7f0;
@@ -103,9 +103,123 @@
     font-size: 0.8rem;
     padding-top: 8px;
   }
+
+  /* Language switch - pure CSS, no JS. A visually-hidden checkbox drives which
+     .lang-page is shown via the general sibling combinator; unchecked = English
+     (default, since this static page is now shown to non-Indonesian visitors -
+     see mahyong-about's src/index.js country mapping), checked = Indonesian. */
+  .lang-toggle-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .lang-switch-wrap {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 18px;
+  }
+  .lang-switch {
+    display: inline-flex;
+    border: 1px solid var(--rule);
+    background: var(--surface);
+    border-radius: 999px;
+    padding: 3px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .lang-opt {
+    padding: 5px 16px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    color: var(--text-muted);
+    transition: background-color 0.15s, color 0.15s;
+  }
+  .lang-toggle-input:not(:checked) ~ .lang-switch-wrap .lang-opt-en,
+  .lang-toggle-input:checked ~ .lang-switch-wrap .lang-opt-id {
+    background: var(--accent);
+    color: #fff;
+  }
+  .lang-page-id { display: none; }
+  .lang-toggle-input:checked ~ .lang-page-en { display: none; }
+  .lang-toggle-input:checked ~ .lang-page-id { display: block; }
 </style>
 </head>
 <body>
+
+<input type="checkbox" id="lang-toggle" class="lang-toggle-input">
+<div class="lang-switch-wrap">
+  <label class="lang-switch" for="lang-toggle">
+    <span class="lang-opt lang-opt-en">EN</span>
+    <span class="lang-opt lang-opt-id">ID</span>
+  </label>
+</div>
+
+<div class="lang-page lang-page-en">
+
+<header>
+  <div class="tile">🀄</div>
+  <h1>Mahyong</h1>
+  <p class="tagline">Classic Mahjong Solitaire, right in your pocket</p>
+</header>
+
+<section>
+  <h2>About</h2>
+  <p>
+    Mahyong is a Mahjong Solitaire (tile-matching) game for Android. Tiles are arranged into a
+    variety of board shapes, and the goal is simple: match pairs of identical tiles until the
+    board is clear.
+  </p>
+  <p>
+    Everything runs entirely on your device - no ads, no account, and no internet connection
+    required to play.
+  </p>
+</section>
+
+<section>
+  <h2>How to play</h2>
+  <ol>
+    <li>
+      Tiles are stacked in layers. A tile can only be selected if it's <strong>free</strong> - no
+      other tile covers it, and at least one side (left or right) isn't blocked by another tile on
+      the same layer.
+    </li>
+    <li>
+      Tap two free tiles with matching faces to pair them. Matched pairs disappear from the board.
+    </li>
+    <li>
+      Flower and season tiles are their own category: any flower tile matches any other flower
+      tile, and likewise for season tiles - the pictures don't need to be identical.
+    </li>
+    <li>
+      Clear the whole board to win. If no more free pairs can be matched, the game ends - use a
+      hint or reshuffle if available.
+    </li>
+  </ol>
+</section>
+
+<section>
+  <h2>Features</h2>
+  <ul class="feature-grid">
+    <li><span class="dot"></span><span>Dozens of different board layouts, grouped by category, with a preview before you play</span></li>
+    <li><span class="dot"></span><span>A Recent list to quickly jump back into your favorite boards</span></li>
+    <li><span class="dot"></span><span>Hints, reshuffle, and undo for when you hit a dead end</span></li>
+    <li><span class="dot"></span><span>Auto-saved games - close the app anytime and pick up exactly where you left off</span></li>
+    <li><span class="dot"></span><span>Choice of visual theme, tile style, and board background</span></li>
+    <li><span class="dot"></span><span>Sound effects for every action: select, match, hint, reshuffle, win</span></li>
+    <li><span class="dot"></span><span>Available in English and Indonesian</span></li>
+  </ul>
+</section>
+
+<footer>
+  <p>Mahyong</p>
+</footer>
+
+</div>
+
+<div class="lang-page lang-page-id">
 
 <header>
   <div class="tile">🀄</div>
@@ -165,6 +279,8 @@
 <footer>
   <p>Mahyong</p>
 </footer>
+
+</div>
 
 </body>
 </html>
