@@ -7,6 +7,8 @@
  *                        AboutUrlResolver expects (see AboutConfig.kt#parseAboutUrl): a bare https
  *                        URL, nothing else on the line. Requires the X-Mahyong-Token header (see
  *                        isAuthorized) - anything else gets 403.
+ *                        Indonesia (env.ABOUT_URL_ID) gets an externally-hosted page; every other
+ *                        country gets this Worker's own static page at `/` (see handleConfig).
  * - everything else  -> served from ./public as static assets (the About page itself, robots.txt).
  *                        Not gated by the token - it's just static marketing copy, and the
  *                        Android app loads it directly via WebView, which can't attach the same
@@ -56,11 +58,11 @@ function handleConfig(request, env, url) {
 
   const aboutUrl =
     country === "ID"
-      ? env.ABOUT_URL_ID ?? `${url.origin}/`
-      : env.ABOUT_URL_DEFAULT;
+      ? env.ABOUT_URL_ID // externally-hosted - no self-fallback, see the check right below
+      : `${url.origin}/`; // every other country always gets this Worker's own static page
 
   if (!aboutUrl) {
-    // Misconfiguration (ABOUT_URL_DEFAULT missing) - fail loudly with 500 rather than serving a
+    // Misconfiguration (ABOUT_URL_ID missing) - fail loudly with 500 rather than serving a
     // blank/garbage body the app's parseAboutUrl would just silently reject anyway.
     return new Response("about url not configured", { status: 500 });
   }

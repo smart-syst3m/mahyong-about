@@ -11,15 +11,18 @@ Cloudflare Worker yang melayani dua hal untuk aplikasi Android **Mahyong**:
      yang men-decompile APK bisa mendapatkannya. Gunanya cuma menyaring bot/scraper acak yang
      kebetulan menemukan URL ini, bukan menahan penyerang yang menyasar spesifik. **Fail-closed**:
      kalau secret `APP_TOKEN` belum pernah di-set, endpoint ini menolak semua orang, termasuk app.
-   - Negara `ID` → `ABOUT_URL_ID` (kalau tidak di-set, fallback ke halaman `/` di Worker ini
-     sendiri).
-   - Negara lain → `ABOUT_URL_DEFAULT` (halaman non-Indonesia, di-host di luar Worker ini).
+   - Negara `ID` → `ABOUT_URL_ID` (halaman Indonesia, di-host di luar Worker ini). Kalau var ini
+     belum di-set, `/config` balas `500` — gagal terang-terangan, bukan diam-diam fallback ke
+     halaman lain.
+   - Negara lain → halaman `/` di Worker ini sendiri (`public/index.html`), selalu, tanpa var.
    - `?cc=XX` bisa dipakai untuk menimpa deteksi negara secara manual saat verifikasi
      (`curl -H "X-Mahyong-Token: <token>" "https://…/config?cc=ID"`).
    - Responsnya **selalu** `Cache-Control: no-store` — jangan diubah. Config ini sengaja tidak
      boleh basi di cache mana pun, termasuk cache Cloudflare sendiri.
-2. **Static assets** (`public/`) — halaman About berbahasa Indonesia (`index.html`), juga
-   `no-store` lewat `public/_headers` supaya isinya tidak pernah ditampilkan basi di WebView app.
+2. **Static assets** (`public/`) — `index.html` (ditulis berbahasa Indonesia), sekarang disajikan
+   ke pengguna **non-Indonesia** per pemetaan di atas. Belum diterjemahkan/disesuaikan untuk
+   audiens itu - sengaja di luar scope perubahan pemetaan ini. Juga `no-store` lewat
+   `public/_headers` supaya isinya tidak pernah ditampilkan basi di WebView app.
 
 ## Deploy
 
@@ -35,8 +38,7 @@ URL itu (plus URL custom domain kalau nanti dipasang) ke sisi app supaya dimasuk
 
 ## Mengubah URL tanpa update app
 
-Ini seluruh maksud dari setup ini — mengubah `vars.ABOUT_URL_DEFAULT` di `wrangler.jsonc` (dan/atau
-menambah `ABOUT_URL_ID`), lalu:
+Ini seluruh maksud dari setup ini — mengubah `vars.ABOUT_URL_ID` di `wrangler.jsonc`, lalu:
 
 ```sh
 npm run deploy
@@ -77,8 +79,8 @@ diganti.
 ```sh
 curl -s -o /dev/null -w "%{http_code}\n" "https://<worker>/config"        # -> 403 (tanpa token)
 curl -s -H "X-Mahyong-Token: <token asli>" "https://<worker>/config"      # negara asli pemanggil
-curl -s -H "X-Mahyong-Token: <token asli>" "https://<worker>/config?cc=ID"   # URL halaman Indonesia
-curl -s -H "X-Mahyong-Token: <token asli>" "https://<worker>/config?cc=US"   # URL halaman default
+curl -s -H "X-Mahyong-Token: <token asli>" "https://<worker>/config?cc=ID"   # URL halaman Indonesia (ABOUT_URL_ID)
+curl -s -H "X-Mahyong-Token: <token asli>" "https://<worker>/config?cc=US"   # halaman Worker sendiri (https://<worker>/)
 curl -sI -H "X-Mahyong-Token: <token asli>" "https://<worker>/config" | grep -i cache-control  # -> no-store
 curl -sI "https://<worker>/" | grep -i -e content-type -e cache-control   # root tidak digerbangi token
 ```
