@@ -1,9 +1,9 @@
 /**
  * Worker for the Mahyong app's About feature.
  *
- * - GET /config      -> plain-text body, exactly one HTTPS URL, chosen by the caller's country
- *                        (Cloudflare's CF-IPCountry request header - no extra product needed,
- *                        every Worker request carries it). This is the contract the Android app's
+ * - GET /config      -> plain-text body, exactly one HTTPS URL, chosen by the caller's country -
+ *                        passed explicitly as the `cc` query param, NOT read from CF-IPCountry
+ *                        (see the note on that below). This is the contract the Android app's
  *                        AboutUrlResolver expects (see AboutConfig.kt#parseAboutUrl): a bare https
  *                        URL, nothing else on the line. Requires the X-Mahyong-Token header (see
  *                        isAuthorized) - anything else gets 403.
@@ -14,8 +14,13 @@
  *                        Android app loads it directly via WebView, which can't attach the same
  *                        custom header on WebView-driven navigation anyway.
  *
- * Country resolution happens entirely at the edge so the app never needs to know - or ask a third
- * party like ipinfo.io - what country it's in.
+ * Country resolution moved from this Worker to the app itself (see the Android app's
+ * CountryProvider.kt/AboutUrlResolver.kt). CF-IPCountry alone turned out unreliable for this:
+ * many VPN clients only tunnel one IP stack (commonly IPv4) and leak the other straight to the
+ * real ISP, so consecutive requests from the very same device/VPN session could arrive over
+ * different stacks and report different countries - the page would flip mid-session with no
+ * change from the user. The app now resolves its own country from an IPv4-pinned source (with an
+ * on-device fallback if that's unreachable) and tells this Worker via `cc`, once, per request.
  */
 const TOKEN_HEADER = "X-Mahyong-Token";
 
@@ -50,22 +55,18 @@ function isAuthorized(request, env) {
 }
 
 function handleConfig(request, env, url) {
-  // ?cc=XX lets a human (or curl) verify country routing without needing a VPN. It only ever
-  // selects which About URL comes back - nothing sensitive rides on it.
-  const country = (url.searchParams.get("cc") ?? request.headers.get("CF-IPCountry") ?? "")
-    .trim()
-    .toUpperCase();
+  // The app resolves its own country now (see the header comment above) and passes it explicitly
+  // via `cc` - this is the ONLY source of country consulted here. Deliberately no CF-IPCountry
+  // fallback: a stale/leaked edge-detected country silently overriding what the app itself
+  // determined would reintroduce exactly the inconsistency this move was meant to fix.
+  const country = (url.searchParams.get("cc") ?? "").trim().toUpperCase();
 
-  const aboutUrl =
-    country === "ID"
-      ? env.ABOUT_URL_ID // externally-hosted - no self-fallback, see the check right below
-      : `${url.origin}/`; // every other country always gets this Worker's own static page
-
-  if (!aboutUrl) {
-    // Misconfiguration (ABOUT_URL_ID missing) - fail loudly with 500 rather than serving a
-    // blank/garbage body the app's parseAboutUrl would just silently reject anyway.
-    return new Response("about url not configured", { status: 500 });
-  }
+  // Per-country URL lives as env.ABOUT_URL_<CC> - e.g. ABOUT_URL_ID for Indonesia - so adding a
+  // new country's page is just a new env var, no code change. Anything without one configured
+  // (including an empty/malformed `cc`) gets this Worker's own static page at `/`, which is a
+  // safe, always-available default rather than a 500 - a missing/garbled `cc` shouldn't be able
+  // to break the About screen.
+  const aboutUrl = (country && env[`ABOUT_URL_${country}`]) || `${url.origin}/`;
 
   return new Response(aboutUrl + "\n", {
     headers: {

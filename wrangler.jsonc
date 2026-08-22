@@ -11,11 +11,12 @@
     "enabled": true
   },
   "vars": {
-    // Indonesia's About page, hosted elsewhere - read by src/index.js whenever CF-IPCountry is
-    // "ID" (every other country gets this Worker's own static page at `/` instead, no var
-    // involved). TESTING VALUE ONLY (debian.org, chosen purely because it's a real reachable
-    // https page, and visually distinct from ubuntu.com so the two branches are easy to tell
-    // apart while testing) - replace with the real Indonesia About URL before shipping.
+    // Indonesia's About page, hosted elsewhere - read by src/index.js whenever the app-supplied
+    // `cc` query param is "ID" (every other/unrecognized country gets this Worker's own static
+    // page at `/` instead, no var involved). A new country's page is just a new ABOUT_URL_<CC>
+    // var here, no code change needed. TESTING VALUE ONLY (debian.org, chosen purely because it's
+    // a real reachable https page, and visually distinct from ubuntu.com so the two branches are
+    // easy to tell apart while testing) - replace with the real Indonesia About URL before shipping.
     // Edit this value here (not in the Cloudflare dashboard) - Workers Builds redeploys from this
     // file on every push to main, so a dashboard-only edit gets silently overwritten next deploy.
     "ABOUT_URL_ID": "https://www.debian.org/"
